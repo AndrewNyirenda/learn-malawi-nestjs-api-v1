@@ -1,3 +1,4 @@
+// src/books/books.controller.ts
 import {
   Controller,
   Get,
@@ -215,23 +216,25 @@ export class BooksController {
   }
 
   /* =========================
-     DOWNLOAD
+     VIEW PDF IN BROWSER
+  ========================= */
+  @Post(':id/view')
+  @Public()
+  async getViewUrl(
+    @Param('id') id: string,
+  ): Promise<{ viewUrl: string; fileName: string }> {
+    return await this.booksService.getViewUrl(id);
+  }
+
+  /* =========================
+     DOWNLOAD PDF
   ========================= */
   @Post(':id/download')
   @Public()
   async download(
     @Param('id') id: string,
   ): Promise<{ downloadUrl: string; fileName: string }> {
-    const book = await this.booksService.incrementDownloadCount(id);
-
-    if (!book.fileUrl || !book.fileName) {
-      throw new NotFoundException('Book file not found');
-    }
-
-    return {
-      downloadUrl: book.fileUrl,
-      fileName: book.fileName,
-    };
+    return await this.booksService.getDownloadUrl(id);
   }
 
   /* =========================
@@ -251,7 +254,6 @@ export class BooksController {
       );
     }
 
-    // Use the new service method
     await this.booksService.removeBookFile(id);
     return this.toResponseDto(await this.booksService.findOne(id));
   }
@@ -273,7 +275,6 @@ export class BooksController {
       );
     }
 
-    // Use the new service method
     await this.booksService.removeThumbnail(id);
     return this.toResponseDto(await this.booksService.findOne(id));
   }

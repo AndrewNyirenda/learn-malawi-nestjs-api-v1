@@ -141,58 +141,61 @@ export class PastPapersService {
   }
 
   async uploadFile(
-    id: string, 
-    file: Express.Multer.File, 
-    currentUser: User,
-    isThumbnail: boolean = false,
-  ): Promise<PastPaper> {
-    const pastPaper = await this.findOne(id);
+  id: string, 
+  file: Express.Multer.File, 
+  currentUser: User,
+  isThumbnail: boolean = false,
+): Promise<PastPaper> {
+  const pastPaper = await this.findOne(id);
 
-    if (pastPaper.uploadedById !== currentUser.id && currentUser.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('You can only upload files to your own past papers');
-    }
-
-    // Check file type
-    const allowedTypes = isThumbnail 
-      ? ['jpg', 'jpeg', 'png', 'gif', 'webp']
-      : ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'];
-    
-    const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-    
-    if (!fileExtension || !allowedTypes.includes(fileExtension)) {
-      throw new BadRequestException(
-        `Invalid file type. Allowed types for ${isThumbnail ? 'thumbnail' : 'past paper'}: ${allowedTypes.join(', ')}`,
-      );
-    }
-
-    const folder = isThumbnail ? 'past-paper-thumbnails' : 'past-papers';
-    const fileUrl = await this.cloudinaryStorage.uploadFile(file, folder);
-
-    // Delete old file if exists
-    if (isThumbnail && pastPaper.thumbnailUrl) {
-      try {
-        await this.cloudinaryStorage.deleteFile(pastPaper.thumbnailUrl);
-      } catch (error) {
-        console.error('Failed to delete old thumbnail from Cloudinary:', error);
-      }
-      pastPaper.thumbnailUrl = fileUrl;
-    } else if (!isThumbnail && pastPaper.fileUrl) {
-      try {
-        await this.cloudinaryStorage.deleteFile(pastPaper.fileUrl);
-      } catch (error) {
-        console.error('Failed to delete old file from Cloudinary:', error);
-      }
-      pastPaper.fileUrl = fileUrl;
-      pastPaper.fileName = file.originalname;
-    } else if (!isThumbnail) {
-      pastPaper.fileUrl = fileUrl;
-      pastPaper.fileName = file.originalname;
-    } else {
-      pastPaper.thumbnailUrl = fileUrl;
-    }
-
-    return await this.pastPapersRepository.save(pastPaper);
+  if (pastPaper.uploadedById !== currentUser.id && currentUser.role !== UserRole.ADMIN) {
+    throw new ForbiddenException('You can only upload files to your own past papers');
   }
+
+  // Check file type
+  const allowedTypes = isThumbnail 
+    ? ['jpg', 'jpeg', 'png', 'gif', 'webp']
+    : ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'];
+  
+  const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+  
+  if (!fileExtension || !allowedTypes.includes(fileExtension)) {
+    throw new BadRequestException(
+      `Invalid file type. Allowed types for ${isThumbnail ? 'thumbnail' : 'past paper'}: ${allowedTypes.join(', ')}`,
+    );
+  }
+
+  const folder = isThumbnail ? 'past-paper-thumbnails' : 'past-papers';
+  
+  // Get the upload result and extract just the URL
+  const uploadResult = await this.cloudinaryStorage.uploadFile(file, folder);
+  const fileUrl = uploadResult.url; // Extract the URL string
+
+  // Delete old file if exists
+  if (isThumbnail && pastPaper.thumbnailUrl) {
+    try {
+      await this.cloudinaryStorage.deleteFile(pastPaper.thumbnailUrl);
+    } catch (error) {
+      console.error('Failed to delete old thumbnail from Cloudinary:', error);
+    }
+    pastPaper.thumbnailUrl = fileUrl;
+  } else if (!isThumbnail && pastPaper.fileUrl) {
+    try {
+      await this.cloudinaryStorage.deleteFile(pastPaper.fileUrl);
+    } catch (error) {
+      console.error('Failed to delete old file from Cloudinary:', error);
+    }
+    pastPaper.fileUrl = fileUrl;
+    pastPaper.fileName = file.originalname;
+  } else if (!isThumbnail) {
+    pastPaper.fileUrl = fileUrl;
+    pastPaper.fileName = file.originalname;
+  } else {
+    pastPaper.thumbnailUrl = fileUrl;
+  }
+
+  return await this.pastPapersRepository.save(pastPaper);
+}
 
   async incrementDownloadCount(id: string): Promise<PastPaper> {
     const pastPaper = await this.findOne(id);

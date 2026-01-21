@@ -135,25 +135,27 @@ export class NewsService {
   }
 
   async uploadImage(id: string, file: Express.Multer.File, currentUser: User): Promise<News> {
-    const news = await this.findOne(id);
+  const news = await this.findOne(id);
 
-    if (news.authorId !== currentUser.id && currentUser.role !== 'Admin') {
-      throw new ForbiddenException('You can only upload images to your own news articles');
-    }
-
-    if (news.imageUrl) {
-      try {
-        await this.cloudinaryStorage.deleteFile(news.imageUrl);
-      } catch (error) {
-        console.error('Failed to delete old image from Cloudinary:', error);
-      }
-    }
-
-    const imageUrl = await this.cloudinaryStorage.uploadFile(file, 'news-images');
-
-    news.imageUrl = imageUrl;
-    return await this.newsRepository.save(news);
+  if (news.authorId !== currentUser.id && currentUser.role !== 'Admin') {
+    throw new ForbiddenException('You can only upload images to your own news articles');
   }
+7
+  if (news.imageUrl) {
+    try {
+      await this.cloudinaryStorage.deleteFile(news.imageUrl);
+    } catch (error) {
+      console.error('Failed to delete old image from Cloudinary:', error);
+    }
+  }
+
+  // Get the upload result and extract just the URL
+  const uploadResult = await this.cloudinaryStorage.uploadFile(file, 'news-images');
+  const imageUrl = uploadResult.url; // Extract the URL string
+
+  news.imageUrl = imageUrl;
+  return await this.newsRepository.save(news);
+}
 
   async removeImage(id: string, currentUser: User): Promise<News> {
     const news = await this.findOne(id);

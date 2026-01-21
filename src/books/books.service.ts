@@ -1,3 +1,4 @@
+// src/books/books.service.ts
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -154,7 +155,7 @@ export class BooksService {
     }
 
     const folder = isThumbnail ? 'book-thumbnails' : 'books';
-    const fileUrl = await this.cloudinaryStorage.uploadFile(file, folder);
+    const uploadResult = await this.cloudinaryStorage.uploadFile(file, folder);
 
     // Delete old file if exists
     if (isThumbnail && book.thumbnailUrl) {
@@ -163,20 +164,20 @@ export class BooksService {
       } catch (error) {
         console.error('Failed to delete old thumbnail from Cloudinary:', error);
       }
-      book.thumbnailUrl = fileUrl;
+      book.thumbnailUrl = uploadResult.url;
     } else if (!isThumbnail && book.fileUrl) {
       try {
         await this.cloudinaryStorage.deleteFile(book.fileUrl);
       } catch (error) {
         console.error('Failed to delete old file from Cloudinary:', error);
       }
-      book.fileUrl = fileUrl;
+      book.fileUrl = uploadResult.url;
       book.fileName = file.originalname;
     } else if (!isThumbnail) {
-      book.fileUrl = fileUrl;
+      book.fileUrl = uploadResult.url;
       book.fileName = file.originalname;
     } else {
-      book.thumbnailUrl = fileUrl;
+      book.thumbnailUrl = uploadResult.url;
     }
 
     return await this.booksRepository.save(book);
@@ -186,6 +187,42 @@ export class BooksService {
     const book = await this.findOne(id);
     book.downloadCount += 1;
     return await this.booksRepository.save(book);
+  }
+
+  // Get URL for viewing PDF in browser
+  async getViewUrl(id: string): Promise<{ viewUrl: string; fileName: string }> {
+    const book = await this.findOne(id);
+
+    if (!book.fileUrl || !book.fileName) {
+      throw new NotFoundException('Book file not found');
+    }
+
+    const viewUrl = this.cloudinaryStorage.generateViewUrl(book.fileUrl);
+
+    return {
+      viewUrl,
+      fileName: book.fileName,
+    };
+  }
+
+  // Get URL for downloading PDF
+  async getDownloadUrl(id: string): Promise<{ downloadUrl: string; fileName: string }> {
+    const book = await this.findOne(id);
+
+    if (!book.fileUrl || !book.fileName) {
+      throw new NotFoundException('Book file not found');
+    }
+
+    const downloadUrl = this.cloudinaryStorage.generateDownloadUrl(book.fileUrl, book.fileName);
+
+    // Increment download count
+    book.downloadCount += 1;
+    await this.booksRepository.save(book);
+
+    return {
+      downloadUrl,
+      fileName: book.fileName,
+    };
   }
 
   async removeBookFile(id: string): Promise<Book> {
