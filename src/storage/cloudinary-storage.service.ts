@@ -15,24 +15,51 @@ export class CloudinaryStorageService {
     });
   }
 
-  async uploadFile(file: Express.Multer.File, folder: string = 'news-images'): Promise<string> {
+  async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
     return new Promise((resolve, reject) => {
+      // Determine resource type based on file mimetype
+      const isImage = file.mimetype.startsWith('image/');
+      const isPdf = file.mimetype === 'application/pdf';
+      const isDocument = [
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain'
+      ].includes(file.mimetype);
+      
+      const resourceType = isImage ? 'image' : (isPdf || isDocument ? 'raw' : 'auto');
+      
+      // For PDFs and documents, we need to add flags for proper download
+      let uploadOptions: any = {
+        folder,
+        resource_type: resourceType,
+      };
+      
+      if (folder.includes('thumbnail')) {
+        // For thumbnails (images only)
+        uploadOptions.transformation = [{ width: 300, height: 200, crop: 'fill' }, { quality: 'auto:good' }];
+      } else if (isPdf || isDocument) {
+        // For PDFs and documents - add format to preserve extension
+        uploadOptions.format = file.originalname.split('.').pop();
+      }
+      
       const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: 'auto',
-          allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-          transformation: [
-            { width: 1200, height: 630, crop: 'limit' },
-            { quality: 'auto:good' },
-            { fetch_format: 'auto' },
-          ],
-        },
+        uploadOptions,
         (error: UploadApiErrorResponse, result: UploadApiResponse) => {
           if (error) {
             reject(new BadRequestException(`Upload failed: ${error.message}`));
           } else {
-            resolve(result.secure_url);
+            // For raw files (PDFs, docs), we need to construct proper URL
+            let finalUrl = result.secure_url;
+            
+            if (isPdf || isDocument) {
+              // For raw files, we might need to add flags for download
+              // Or return as-is since it already works for curl download
+              finalUrl = result.secure_url;
+            }
+            
+            resolve(finalUrl);
           }
         }
       );
@@ -44,40 +71,28 @@ export class CloudinaryStorageService {
     });
   }
 
-  async deleteFile(imageUrl: string): Promise<void> {
+  async deleteFile(fileUrl: string): Promise<void> {
     try {
-      const publicId = this.extractPublicId(imageUrl);
+      const publicId = this.extractPublicId(fileUrl);
       
       if (publicId) {
-        await cloudinary.uploader.destroy(publicId);
+        // Determine resource type based on file extension
+        const isPdf = fileUrl.includes('.pdf');
+        const isDocument = fileUrl.match(/\.(doc|docx|ppt|pptx|txt)$/i);
+        
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: (isPdf || isDocument) ? 'raw' : 'image',
+          invalidate: true,
+        });
       }
     } catch (error) {
-      console.error('Failed to delete image from Cloudinary:', error);
+      console.error('Failed to delete file from Cloudinary:', error);
     }
   }
 
-  async getOptimizedUrl(imageUrl: string, options: {
-    width?: number;
-    height?: number;
-    crop?: string;
-    quality?: string;
-    format?: string;
-  } = {}): Promise<string> {
-    const publicId = this.extractPublicId(imageUrl);
-    
-    if (!publicId) {
-      return imageUrl;
-    }
-
-    return cloudinary.url(publicId, {
-      ...options,
-      secure: true,
-    });
-  }
-
-  private extractPublicId(imageUrl: string): string | null {
+  private extractPublicId(fileUrl: string): string | null {
     try {
-      const url = new URL(imageUrl);
+      const url = new URL(fileUrl);
       const pathParts = url.pathname.split('/');
       
       const uploadIndex = pathParts.indexOf('upload');
@@ -88,6 +103,7 @@ export class CloudinaryStorageService {
         
         const publicIdParts = pathParts.slice(startIndex);
         
+        // Remove file extension
         const lastPart = publicIdParts[publicIdParts.length - 1];
         const lastDotIndex = lastPart.lastIndexOf('.');
         if (lastDotIndex !== -1) {
@@ -104,20 +120,44 @@ export class CloudinaryStorageService {
   }
 
   async generateThumbnailUrl(imageUrl: string): Promise<string> {
-    return this.getOptimizedUrl(imageUrl, {
+    const publicId = this.extractPublicId(imageUrl);
+    
+    if (!publicId) {
+      return imageUrl;
+    }
+
+    return cloudinary.url(publicId, {
       width: 300,
       height: 200,
       crop: 'fill',
       quality: 'auto:good',
+      secure: true,
     });
   }
 
-  async generateNewsImageUrl(imageUrl: string): Promise<string> {
-    return this.getOptimizedUrl(imageUrl, {
-      width: 800,
-      height: 450,
-      crop: 'limit',
-      quality: 'auto:best',
-    });
+  // Helper method to generate download URL with proper flags
+  generateDownloadUrl(fileUrl: string, fileName: string): string {
+    const publicId = this.extractPublicId(fileUrl);
+    
+    if (!publicId) {
+      return fileUrl;
+    }
+
+    // Check if it's a PDF/document
+    const isPdf = fileName.includes('.pdf');
+    const isDocument = fileName.match(/\.(doc|docx|ppt|pptx|txt)$/i);
+    
+    if (isPdf || isDocument) {
+      // For raw files, generate URL with download flag
+      return cloudinary.url(publicId, {
+        resource_type: 'raw',
+        flags: 'attachment',
+        filename: fileName,
+        secure: true,
+      });
+    }
+    
+    // For images, return regular URL
+    return fileUrl;
   }
 }

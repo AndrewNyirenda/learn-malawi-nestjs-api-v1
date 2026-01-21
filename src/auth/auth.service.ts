@@ -152,9 +152,10 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async getProfile(userId: string): Promise<Omit<User, 'password'>> {
+
+async getProfile(userId: string): Promise<Omit<User, 'password'>> {
     const user = await this.usersService.findOne(userId);
-    const { password, ...result } = user;
-    return result;
+
+    return user as Omit<User, 'password'>;
   }
 }

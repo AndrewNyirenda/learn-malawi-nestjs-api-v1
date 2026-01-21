@@ -1,4 +1,3 @@
-// src/users/users.service.ts - fix the findOneByEmail method
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -61,7 +60,8 @@ export class UsersService {
     });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+
+async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { id } });
     
     if (!user) {
@@ -79,6 +79,7 @@ export class UsersService {
       }
     }
 
+    // UpdateUserDto doesn't include password, so we can't check it here
     Object.assign(user, updateUserDto);
     return await this.usersRepository.save(user);
   }
