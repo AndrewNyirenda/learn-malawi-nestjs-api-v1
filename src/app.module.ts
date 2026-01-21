@@ -11,11 +11,14 @@ import { RefreshToken } from './auth/entities/refresh-token.entity';
 import { News } from './news/entities/news.entity';
 import { Book } from './books/entities/book.entity';
 import { PastPaper } from './past-papers/entities/past-paper.entity'; 
-import {CareerResource} from './career-resources/entities/career-resource.entity';
+import { CareerResource } from './career-resources/entities/career-resource.entity';
+import { Quiz } from './quizzes/entities/quiz.entity'; // Add this import
+import { Question } from './quizzes/entities/question.entity'; // Add this import
 import * as Joi from 'joi';
-import {BooksModule} from './books/books.module';
-import {PastPapersModule} from './past-papers/past-papers.module';
-import {CareerResourcesModule} from "./career-resources/career-resources.module";
+import { BooksModule } from './books/books.module';
+import { PastPapersModule } from './past-papers/past-papers.module';
+import { CareerResourcesModule } from "./career-resources/career-resources.module";
+import { QuizzesModule } from './quizzes/quizzes.module'; // Add this import
 
 @Module({
   imports: [
@@ -43,7 +46,16 @@ import {CareerResourcesModule} from "./career-resources/career-resources.module"
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
         ssl: configService.get<string>('NODE_ENV') === 'production',
-        entities: [User, RefreshToken, News, Book, PastPaper, CareerResource], 
+        entities: [
+          User, 
+          RefreshToken, 
+          News, 
+          Book, 
+          PastPaper, 
+          CareerResource,
+          Quiz, // Add Quiz entity
+          Question // Add Question entity
+        ],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         logging: configService.get<string>('NODE_ENV') === 'development',
       }),
@@ -54,7 +66,8 @@ import {CareerResourcesModule} from "./career-resources/career-resources.module"
     NewsModule,
     PastPapersModule,
     BooksModule,
-    CareerResourcesModule
+    CareerResourcesModule,
+    QuizzesModule, // Add QuizzesModule to imports array
   ],
   controllers: [],
   providers: [
