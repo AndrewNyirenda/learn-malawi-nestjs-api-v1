@@ -9,11 +9,13 @@ import { JwtAuthGuardWithPublic } from './auth/guards/public.guard';
 import { User } from './users/entities/user.entity';
 import { RefreshToken } from './auth/entities/refresh-token.entity';
 import { News } from './news/entities/news.entity';
-import { Book } from './books/entities/book.entity'; // Add this
-import { PastPaper } from './past-papers/entities/past-paper.entity'; // Add this too if you're using past papers
+import { Book } from './books/entities/book.entity';
+import { PastPaper } from './past-papers/entities/past-paper.entity'; 
+import {CareerResource} from './career-resources/entities/career-resource.entity';
 import * as Joi from 'joi';
 import {BooksModule} from './books/books.module';
 import {PastPapersModule} from './past-papers/past-papers.module';
+import {CareerResourcesModule} from "./career-resources/career-resources.module";
 
 @Module({
   imports: [
@@ -41,7 +43,7 @@ import {PastPapersModule} from './past-papers/past-papers.module';
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
         ssl: configService.get<string>('NODE_ENV') === 'production',
-        entities: [User, RefreshToken, News, Book, PastPaper], // Add Book and PastPaper here
+        entities: [User, RefreshToken, News, Book, PastPaper, CareerResource], 
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         logging: configService.get<string>('NODE_ENV') === 'development',
       }),
@@ -52,6 +54,7 @@ import {PastPapersModule} from './past-papers/past-papers.module';
     NewsModule,
     PastPapersModule,
     BooksModule,
+    CareerResourcesModule
   ],
   controllers: [],
   providers: [
