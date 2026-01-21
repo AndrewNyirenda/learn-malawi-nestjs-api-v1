@@ -1,3 +1,4 @@
+// src/past-papers/past-papers.service.ts
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -141,62 +142,137 @@ export class PastPapersService {
   }
 
   async uploadFile(
-  id: string, 
-  file: Express.Multer.File, 
-  currentUser: User,
-  isThumbnail: boolean = false,
-): Promise<PastPaper> {
-  const pastPaper = await this.findOne(id);
+    id: string, 
+    file: Express.Multer.File, 
+    currentUser: User,
+    isThumbnail: boolean = false,
+  ): Promise<PastPaper> {
+    const pastPaper = await this.findOne(id);
 
-  if (pastPaper.uploadedById !== currentUser.id && currentUser.role !== UserRole.ADMIN) {
-    throw new ForbiddenException('You can only upload files to your own past papers');
-  }
-
-  // Check file type
-  const allowedTypes = isThumbnail 
-    ? ['jpg', 'jpeg', 'png', 'gif', 'webp']
-    : ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'];
-  
-  const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-  
-  if (!fileExtension || !allowedTypes.includes(fileExtension)) {
-    throw new BadRequestException(
-      `Invalid file type. Allowed types for ${isThumbnail ? 'thumbnail' : 'past paper'}: ${allowedTypes.join(', ')}`,
-    );
-  }
-
-  const folder = isThumbnail ? 'past-paper-thumbnails' : 'past-papers';
-  
-  // Get the upload result and extract just the URL
-  const uploadResult = await this.cloudinaryStorage.uploadFile(file, folder);
-  const fileUrl = uploadResult.url; // Extract the URL string
-
-  // Delete old file if exists
-  if (isThumbnail && pastPaper.thumbnailUrl) {
-    try {
-      await this.cloudinaryStorage.deleteFile(pastPaper.thumbnailUrl);
-    } catch (error) {
-      console.error('Failed to delete old thumbnail from Cloudinary:', error);
+    if (pastPaper.uploadedById !== currentUser.id && currentUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('You can only upload files to your own past papers');
     }
-    pastPaper.thumbnailUrl = fileUrl;
-  } else if (!isThumbnail && pastPaper.fileUrl) {
-    try {
-      await this.cloudinaryStorage.deleteFile(pastPaper.fileUrl);
-    } catch (error) {
-      console.error('Failed to delete old file from Cloudinary:', error);
+
+    // Check file type
+    const allowedTypes = isThumbnail 
+      ? ['jpg', 'jpeg', 'png', 'gif', 'webp']
+      : ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'];
+    
+    const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+    
+    if (!fileExtension || !allowedTypes.includes(fileExtension)) {
+      throw new BadRequestException(
+        `Invalid file type. Allowed types for ${isThumbnail ? 'thumbnail' : 'past paper'}: ${allowedTypes.join(', ')}`,
+      );
     }
-    pastPaper.fileUrl = fileUrl;
-    pastPaper.fileName = file.originalname;
-  } else if (!isThumbnail) {
-    pastPaper.fileUrl = fileUrl;
-    pastPaper.fileName = file.originalname;
-  } else {
-    pastPaper.thumbnailUrl = fileUrl;
+
+    const folder = isThumbnail ? 'past-paper-thumbnails' : 'past-papers';
+    // Get the upload result (returns object with url, publicId, resourceType)
+    const uploadResult = await this.cloudinaryStorage.uploadFile(file, folder);
+
+    // Delete old file if exists
+    if (isThumbnail && pastPaper.thumbnailUrl) {
+      try {
+        await this.cloudinaryStorage.deleteFile(pastPaper.thumbnailUrl);
+      } catch (error) {
+        console.error('Failed to delete old thumbnail from Cloudinary:', error);
+      }
+      pastPaper.thumbnailUrl = uploadResult.url; // Use .url property
+    } else if (!isThumbnail && pastPaper.fileUrl) {
+      try {
+        await this.cloudinaryStorage.deleteFile(pastPaper.fileUrl);
+      } catch (error) {
+        console.error('Failed to delete old file from Cloudinary:', error);
+      }
+      pastPaper.fileUrl = uploadResult.url; // Use .url property
+      pastPaper.fileName = file.originalname;
+    } else if (!isThumbnail) {
+      pastPaper.fileUrl = uploadResult.url; // Use .url property
+      pastPaper.fileName = file.originalname;
+    } else {
+      pastPaper.thumbnailUrl = uploadResult.url; // Use .url property
+    }
+
+    return await this.pastPapersRepository.save(pastPaper);
   }
 
-  return await this.pastPapersRepository.save(pastPaper);
-}
+  // Get URL for viewing in browser
+  async getViewUrl(id: string): Promise<{ viewUrl: string; fileName: string }> {
+    const pastPaper = await this.findOne(id);
 
+    if (!pastPaper.fileUrl || !pastPaper.fileName) {
+      throw new NotFoundException('Past paper file not found');
+    }
+
+    // Check if generateViewUrl takes 1 or 2 arguments based on your implementation
+    // If it takes 2 arguments: generateViewUrl(fileUrl, fileName)
+    // If it takes 1 argument: generateViewUrl(fileUrl)
+    const viewUrl = this.cloudinaryStorage.generateViewUrl(pastPaper.fileUrl);
+
+    return {
+      viewUrl,
+      fileName: pastPaper.fileName,
+    };
+  }
+
+  // Get URL for download
+  async getDownloadUrl(id: string): Promise<{ downloadUrl: string; fileName: string }> {
+    const pastPaper = await this.findOne(id);
+
+    if (!pastPaper.fileUrl || !pastPaper.fileName) {
+      throw new NotFoundException('Past paper file not found');
+    }
+
+    const downloadUrl = this.cloudinaryStorage.generateDownloadUrl(pastPaper.fileUrl, pastPaper.fileName);
+
+    // Increment download count
+    pastPaper.downloadCount += 1;
+    await this.pastPapersRepository.save(pastPaper);
+
+    return {
+      downloadUrl,
+      fileName: pastPaper.fileName,
+    };
+  }
+
+  // Remove file (service method for consistency)
+  async removeFile(id: string): Promise<PastPaper> {
+    const pastPaper = await this.findOne(id);
+
+    if (pastPaper.fileUrl) {
+      try {
+        await this.cloudinaryStorage.deleteFile(pastPaper.fileUrl);
+      } catch (error) {
+        console.error('Failed to delete file from Cloudinary:', error);
+      }
+
+      pastPaper.fileUrl = undefined;
+      pastPaper.fileName = undefined;
+      return await this.pastPapersRepository.save(pastPaper);
+    }
+
+    return pastPaper;
+  }
+
+  // Remove thumbnail (service method for consistency)
+  async removeThumbnail(id: string): Promise<PastPaper> {
+    const pastPaper = await this.findOne(id);
+
+    if (pastPaper.thumbnailUrl) {
+      try {
+        await this.cloudinaryStorage.deleteFile(pastPaper.thumbnailUrl);
+      } catch (error) {
+        console.error('Failed to delete thumbnail from Cloudinary:', error);
+      }
+
+      pastPaper.thumbnailUrl = undefined;
+      return await this.pastPapersRepository.save(pastPaper);
+    }
+
+    return pastPaper;
+  }
+
+  // Keep this method for backward compatibility if needed
   async incrementDownloadCount(id: string): Promise<PastPaper> {
     const pastPaper = await this.findOne(id);
     pastPaper.downloadCount += 1;

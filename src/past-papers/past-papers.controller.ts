@@ -198,21 +198,31 @@ export class PastPapersController {
     return this.toResponseDto(pastPaper);
   }
 
-  @Post(':id/download')
+  /* =========================
+     VIEW PAST PAPER IN BROWSER
+  ========================= */
+  @Post(':id/view')
   @Public()
-  async download(@Param('id') id: string): Promise<{ downloadUrl: string; fileName: string }> {
-    const pastPaper = await this.pastPapersService.incrementDownloadCount(id);
-    
-    if (!pastPaper.fileUrl || !pastPaper.fileName) {
-      throw new NotFoundException('Past paper file not found');
-    }
-    
-    return {
-      downloadUrl: pastPaper.fileUrl,
-      fileName: pastPaper.fileName,
-    };
+  async getViewUrl(
+    @Param('id') id: string,
+  ): Promise<{ viewUrl: string; fileName: string }> {
+    return await this.pastPapersService.getViewUrl(id);
   }
 
+  /* =========================
+     DOWNLOAD PAST PAPER
+  ========================= */
+  @Post(':id/download')
+  @Public()
+  async download(
+    @Param('id') id: string,
+  ): Promise<{ downloadUrl: string; fileName: string }> {
+    return await this.pastPapersService.getDownloadUrl(id);
+  }
+
+  /* =========================
+     REMOVE FILE
+  ========================= */
   @Delete(':id/file')
   @UseGuards(JwtAuthGuard)
   async removeFile(@Param('id') id: string, @User() user): Promise<PastPaperResponseDto> {
@@ -222,28 +232,14 @@ export class PastPapersController {
       throw new ForbiddenException('You can only remove files from your own past papers');
     }
 
-    if (pastPaper.fileUrl) {
-      try {
-        // Delete from Cloudinary
-        const cloudinaryService = this.pastPapersService['cloudinaryStorage'];
-        await cloudinaryService.deleteFile(pastPaper.fileUrl);
-      } catch (error) {
-        console.error('Failed to delete file from Cloudinary:', error);
-      }
-
-      // Use repository update method instead of direct assignment
-      await this.pastPapersService['pastPapersRepository'].update(id, {
-        fileUrl: undefined,
-        fileName: undefined,
-      });
-      
-      // Refresh the past paper object
-      return this.toResponseDto(await this.pastPapersService.findOne(id));
-    }
-
-    return this.toResponseDto(pastPaper);
+    // Use the service method instead of direct repository access
+    await this.pastPapersService.removeFile(id);
+    return this.toResponseDto(await this.pastPapersService.findOne(id));
   }
 
+  /* =========================
+     REMOVE THUMBNAIL
+  ========================= */
   @Delete(':id/thumbnail')
   @UseGuards(JwtAuthGuard)
   async removeThumbnail(@Param('id') id: string, @User() user): Promise<PastPaperResponseDto> {
@@ -253,24 +249,8 @@ export class PastPapersController {
       throw new ForbiddenException('You can only remove thumbnails from your own past papers');
     }
 
-    if (pastPaper.thumbnailUrl) {
-      try {
-        // Delete from Cloudinary
-        const cloudinaryService = this.pastPapersService['cloudinaryStorage'];
-        await cloudinaryService.deleteFile(pastPaper.thumbnailUrl);
-      } catch (error) {
-        console.error('Failed to delete thumbnail from Cloudinary:', error);
-      }
-
-      // Use repository update method instead of direct assignment
-      await this.pastPapersService['pastPapersRepository'].update(id, {
-        thumbnailUrl: undefined,
-      });
-      
-      // Refresh the past paper object
-      return this.toResponseDto(await this.pastPapersService.findOne(id));
-    }
-
-    return this.toResponseDto(pastPaper);
+    // Use the service method instead of direct repository access
+    await this.pastPapersService.removeThumbnail(id);
+    return this.toResponseDto(await this.pastPapersService.findOne(id));
   }
 }
