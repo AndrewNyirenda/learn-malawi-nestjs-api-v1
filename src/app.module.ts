@@ -12,13 +12,15 @@ import { News } from './news/entities/news.entity';
 import { Book } from './books/entities/book.entity';
 import { PastPaper } from './past-papers/entities/past-paper.entity'; 
 import { CareerResource } from './career-resources/entities/career-resource.entity';
-import { Quiz } from './quizzes/entities/quiz.entity'; // Add this import
-import { Question } from './quizzes/entities/question.entity'; // Add this import
+import { Quiz } from './quizzes/entities/quiz.entity';
+import { Question } from './quizzes/entities/question.entity';
+import { Tutorial } from './tutorials/entities/tutorial.entity'; // Add this import
 import * as Joi from 'joi';
 import { BooksModule } from './books/books.module';
 import { PastPapersModule } from './past-papers/past-papers.module';
 import { CareerResourcesModule } from "./career-resources/career-resources.module";
-import { QuizzesModule } from './quizzes/quizzes.module'; // Add this import
+import { QuizzesModule } from './quizzes/quizzes.module';
+import { TutorialsModule } from './tutorials/tutorials.module'; // Add this import
 
 @Module({
   imports: [
@@ -53,8 +55,9 @@ import { QuizzesModule } from './quizzes/quizzes.module'; // Add this import
           Book, 
           PastPaper, 
           CareerResource,
-          Quiz, // Add Quiz entity
-          Question // Add Question entity
+          Quiz,
+          Question,
+          Tutorial // Add Tutorial entity
         ],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         logging: configService.get<string>('NODE_ENV') === 'development',
@@ -67,7 +70,8 @@ import { QuizzesModule } from './quizzes/quizzes.module'; // Add this import
     PastPapersModule,
     BooksModule,
     CareerResourcesModule,
-    QuizzesModule, // Add QuizzesModule to imports array
+    QuizzesModule,
+    TutorialsModule, // Add TutorialsModule to imports array
   ],
   controllers: [],
   providers: [
