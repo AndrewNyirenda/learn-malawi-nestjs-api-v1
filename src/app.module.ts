@@ -14,13 +14,15 @@ import { PastPaper } from './past-papers/entities/past-paper.entity';
 import { CareerResource } from './career-resources/entities/career-resource.entity';
 import { Quiz } from './quizzes/entities/quiz.entity';
 import { Question } from './quizzes/entities/question.entity';
-import { Tutorial } from './tutorials/entities/tutorial.entity'; // Add this import
+import { Tutorial } from './tutorials/entities/tutorial.entity';
+import { Message } from './messages/entities/message.entity'; 
 import * as Joi from 'joi';
 import { BooksModule } from './books/books.module';
 import { PastPapersModule } from './past-papers/past-papers.module';
 import { CareerResourcesModule } from "./career-resources/career-resources.module";
 import { QuizzesModule } from './quizzes/quizzes.module';
-import { TutorialsModule } from './tutorials/tutorials.module'; // Add this import
+import { TutorialsModule } from './tutorials/tutorials.module';
+import { MessagesModule } from './messages/messages.module'; 
 
 @Module({
   imports: [
@@ -57,7 +59,8 @@ import { TutorialsModule } from './tutorials/tutorials.module'; // Add this impo
           CareerResource,
           Quiz,
           Question,
-          Tutorial // Add Tutorial entity
+          Tutorial,
+          Message 
         ],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         logging: configService.get<string>('NODE_ENV') === 'development',
@@ -71,7 +74,8 @@ import { TutorialsModule } from './tutorials/tutorials.module'; // Add this impo
     BooksModule,
     CareerResourcesModule,
     QuizzesModule,
-    TutorialsModule, // Add TutorialsModule to imports array
+    TutorialsModule,
+    MessagesModule, 
   ],
   controllers: [],
   providers: [
