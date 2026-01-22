@@ -35,19 +35,20 @@ export class QuizzesService {
     const query = this.quizzesRepository.createQueryBuilder('quiz')
       .leftJoinAndSelect('quiz.questions', 'questions');
 
-    if (level) {
+    // Only filter by level if it's a valid enum value
+    if (level && level !== 'all' && (level === 'primary' || level === 'secondary')) {
       query.andWhere('quiz.level = :level', { level });
     }
 
-    if (subject) {
+    if (subject && subject !== 'all') {
       query.andWhere('quiz.subject = :subject', { subject });
     }
 
-    if (difficulty) {
+    if (difficulty && difficulty !== 'all') {
       query.andWhere('quiz.difficulty = :difficulty', { difficulty });
     }
 
-    if (classFilter) {
+    if (classFilter && classFilter !== 'all') {
       query.andWhere('quiz.class = :classFilter', { classFilter });
     }
 
@@ -140,9 +141,11 @@ export class QuizzesService {
       .select('DISTINCT quiz.subject', 'subject')
       .orderBy('quiz.subject', 'ASC');
 
-    if (level) {
+    // Only filter if level is a valid enum value (primary or secondary)
+    if (level && level !== 'all' && (level === 'primary' || level === 'secondary')) {
       query.where('quiz.level = :level', { level });
     }
+    // If level is 'all' or any other value, don't apply level filter
 
     const result = await query.getRawMany();
     return result.map(r => r.subject);
@@ -154,9 +157,11 @@ export class QuizzesService {
       .select('DISTINCT quiz.class', 'class')
       .orderBy('quiz.class', 'ASC');
 
-    if (level) {
+    // Only filter if level is a valid enum value (primary or secondary)
+    if (level && level !== 'all' && (level === 'primary' || level === 'secondary')) {
       query.where('quiz.level = :level', { level });
     }
+    // If level is 'all' or any other value, don't apply level filter
 
     const result = await query.getRawMany();
     return result.map(r => r.class);

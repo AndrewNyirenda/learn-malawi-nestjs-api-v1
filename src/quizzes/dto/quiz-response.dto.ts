@@ -1,3 +1,4 @@
+// src/quizzes/dto/quiz-response.dto.ts
 import { Expose, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { EducationLevel, Difficulty } from '../entities/quiz.entity';
@@ -36,6 +37,10 @@ export class QuizResponseDto {
   @ApiProperty()
   @Expose()
   title: string;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  description?: string; // ADD THIS LINE
 
   @ApiProperty({ enum: EducationLevel })
   @Expose()

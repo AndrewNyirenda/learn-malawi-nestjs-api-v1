@@ -1,4 +1,5 @@
-import { IsString, IsEnum, IsArray, ValidateNested, IsNumber, Min, IsNotEmpty } from 'class-validator';
+// src/quizzes/dto/create-quiz.dto.ts
+import { IsString, IsEnum, IsArray, ValidateNested, IsNumber, Min, IsNotEmpty, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { EducationLevel, Difficulty } from '../entities/quiz.entity';
@@ -9,6 +10,11 @@ export class CreateQuizDto {
   @IsString()
   @IsNotEmpty()
   title: string;
+
+  @ApiProperty({ example: 'A quiz about basic mathematics', required: false })
+  @IsString()
+  @IsOptional()
+  description?: string;
 
   @ApiProperty({ enum: EducationLevel, example: EducationLevel.PRIMARY })
   @IsEnum(EducationLevel)
