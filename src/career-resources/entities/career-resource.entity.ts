@@ -1,4 +1,4 @@
-// src/career-resources/entities/career-resource.entity.ts
+
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('career_resources')
