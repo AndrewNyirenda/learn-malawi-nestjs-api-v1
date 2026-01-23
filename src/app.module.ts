@@ -22,7 +22,9 @@ import { PastPapersModule } from './past-papers/past-papers.module';
 import { CareerResourcesModule } from "./career-resources/career-resources.module";
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { TutorialsModule } from './tutorials/tutorials.module';
-import { MessagesModule } from './messages/messages.module'; 
+import { MessagesModule } from './messages/messages.module';
+
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -76,6 +78,7 @@ import { MessagesModule } from './messages/messages.module';
     QuizzesModule,
     TutorialsModule,
     MessagesModule, 
+    DashboardModule,
   ],
   controllers: [],
   providers: [
