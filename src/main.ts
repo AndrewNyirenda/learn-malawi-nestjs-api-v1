@@ -5,12 +5,34 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Enable CORS - Add this section
+  
   app.enableCors({
-    origin: true, // Allow all origins in development
+    origin: [
+      'https://learn-malawi-plum.vercel.app/',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:4173',
+      
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type', 
+      'Authorization', 
+      'Accept',
+      'X-Requested-With',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Methods',
+      'Content-Disposition' 
+    ],
+    exposedHeaders: [
+      'Content-Disposition',
+      'Authorization'
+    ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    maxAge: 86400
   });
 
   // Enable validation globally
