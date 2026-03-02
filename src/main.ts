@@ -8,7 +8,7 @@ async function bootstrap() {
   
   app.enableCors({
     origin: [
-      'https://learn-malawi-plum.vercel.app/',
+      'https://learn-malawi-plum.vercel.app',
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:4173',
